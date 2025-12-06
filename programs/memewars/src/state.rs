@@ -120,6 +120,10 @@ impl UserState {
 }
 
 /// Vault: Quản lý tài sản của một phe trong cuộc chiến
+/// 
+/// Reward Distribution Logic:
+/// - Team thắng: Nhận vốn gốc + lãi của mình + TOÀN BỘ lãi của team thua
+/// - Team thua: Chỉ nhận vốn gốc (không có lãi, vì lãi đã chuyển cho team thắng)
 #[account]
 pub struct Vault {
     /// ID của cuộc chiến
@@ -128,13 +132,14 @@ pub struct Vault {
     /// Phe: 1 = Team A, 2 = Team B
     pub team: u8,
     
-    /// Tổng số tiền trong vault (lamports)
+    /// Tổng số tiền trong vault (lamports) - vốn gốc đã stake
     pub total_amount: u64,
     
     /// Số tiền đã được gửi vào lending protocol (lamports)
     pub lent_amount: u64,
     
     /// Address của lending position (nếu có)
+    /// Lưu mSOL token account address để rút lại khi settle
     pub lending_position: Option<Pubkey>,
     
     /// Bump seed cho PDA

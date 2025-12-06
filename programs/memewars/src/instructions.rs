@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 
 use crate::constants;
+use crate::lending;
 use crate::state::*;
 
 /// Deposit SOL vào một cuộc chiến
@@ -38,7 +39,7 @@ pub fn deposit(ctx: Context<Deposit>, amount: u64, team: u8) -> Result<()> {
     );
 
     // Transfer SOL từ user vào vault
-    **ctx.accounts.vault.to_account_info().try_borrow_mut_lamports()? += amount;
+    **vault.to_account_info().try_borrow_mut_lamports()? += amount;
     **ctx.accounts.user.to_account_info().try_borrow_mut_lamports()? -= amount;
 
     // Cập nhật UserState
@@ -50,7 +51,17 @@ pub fn deposit(ctx: Context<Deposit>, amount: u64, team: u8) -> Result<()> {
         user_state.amount_staked = amount;
         user_state.stake_time = clock.unix_timestamp;
         user_state.claimed = false;
-        user_state.bump = ctx.bumps.get("user_state").copied().ok_or(MemeWarsError::InvalidVault)?;
+        // Bump is automatically provided by Anchor when using seeds with bump
+        // We can derive it or get it from the account's key derivation
+        let (_, user_state_bump) = Pubkey::find_program_address(
+            &[
+                b"user_state",
+                ctx.accounts.user.key().as_ref(),
+                battle.battle_id.to_le_bytes().as_ref(),
+            ],
+            ctx.program_id,
+        );
+        user_state.bump = user_state_bump;
     } else {
         // Boost: thêm tiền vào stake hiện có
         // Kiểm tra user không thể đổi team
@@ -69,13 +80,88 @@ pub fn deposit(ctx: Context<Deposit>, amount: u64, team: u8) -> Result<()> {
         vault.battle_id = battle.battle_id;
         vault.team = team;
         vault.lending_position = None;
-        vault.bump = ctx.bumps.get("vault").copied().ok_or(MemeWarsError::InvalidVault)?;
+        // Derive vault bump
+        let (_, vault_bump) = Pubkey::find_program_address(
+            &[
+                b"vault",
+                battle.battle_id.to_le_bytes().as_ref(),
+                team.to_le_bytes().as_ref(),
+            ],
+            ctx.program_id,
+        );
+        vault.bump = vault_bump;
     }
 
     // Cập nhật Vault
     vault.total_amount = vault.total_amount
         .checked_add(amount)
         .ok_or(MemeWarsError::Overflow)?;
+
+    // Tích hợp Lending: Gửi SOL vào lending protocol để sinh lãi
+    // Chỉ gửi số tiền mới deposit vào lending (không gửi lại số đã gửi)
+    // 
+    // Lưu ý về Reward Distribution (khi implement settle() và claim_reward()):
+    // - Team thắng: Nhận vốn gốc + lãi của mình + TOÀN BỘ lãi của team thua
+    // - Team thua: Chỉ nhận vốn gốc (không có lãi, vì lãi đã chuyển cho team thắng)
+    let amount_to_lend = amount;
+    
+    // Kiểm tra xem có lending integration được cung cấp không
+    // Nếu có, thực hiện CPI call để deposit vào lending protocol
+    if let Some(_lending_program_ref) = ctx.accounts.lending_program.as_ref() {
+        // Xác định lending protocol (có thể config hoặc detect từ program ID)
+        // Mặc định sử dụng Marinade vì đơn giản và ổn định
+        let protocol = lending::LendingProtocol::Marinade;
+        
+        // Tạo lending accounts structure cho Marinade
+        let lending_accounts = lending::LendingAccounts {
+            lending_program: ctx.accounts.lending_program.as_ref().map(|v| v.to_account_info()),
+            // Marinade accounts
+            state_account: ctx.accounts.marinade_state.as_ref().map(|v| v.to_account_info()),
+            mint_account: ctx.accounts.lending_mint_account.as_ref().map(|v| v.to_account_info()),
+            token_account: ctx.accounts.lending_token_account.as_ref().map(|v| v.to_account_info()),
+            pool_sol_account: ctx.accounts.marinade_liq_pool_sol.as_ref().map(|v| v.to_account_info()),
+            pool_msol_account: ctx.accounts.marinade_liq_pool_msol.as_ref().map(|v| v.to_account_info()),
+            pool_authority_account: ctx.accounts.marinade_liq_pool_authority.as_ref().map(|v| v.to_account_info()),
+            reserve_account: ctx.accounts.marinade_reserve.as_ref().map(|v| v.to_account_info()),
+            mint_authority_account: ctx.accounts.marinade_msol_mint_authority.as_ref().map(|v| v.to_account_info()),
+            // Marginfi accounts
+            group_account: ctx.accounts.lending_group_account.as_ref().map(|v| v.to_account_info()),
+            user_account: ctx.accounts.lending_user_account.as_ref().map(|v| v.to_account_info()),
+            // Kamino accounts
+            pool_account: ctx.accounts.lending_pool_account.as_ref().map(|v| v.to_account_info()),
+            // Common accounts
+            system_program: Some(ctx.accounts.system_program.to_account_info()),
+            token_program_account: Some(ctx.accounts.token_program.to_account_info()),
+        };
+        
+        // Gọi lending deposit
+        match lending::deposit_to_lending(
+            protocol,
+            &vault.to_account_info(),
+            amount_to_lend,
+            lending_accounts,
+        ) {
+            Ok(lending_position) => {
+                // Cập nhật vault với lending position
+                if vault.lending_position.is_none() {
+                    vault.lending_position = Some(lending_position);
+                }
+                vault.lent_amount = vault.lent_amount
+                    .checked_add(amount_to_lend)
+                    .ok_or(MemeWarsError::Overflow)?;
+                
+                msg!("Deposited {} lamports to lending protocol", amount_to_lend);
+            }
+            Err(e) => {
+                // Nếu lending fail, log warning nhưng vẫn tiếp tục
+                // Trong production có thể muốn revert hoặc handle khác
+                msg!("Warning: Failed to deposit to lending: {:?}", e);
+                // SOL vẫn ở trong vault, có thể thử lại sau
+            }
+        }
+    } else {
+        msg!("Lending integration skipped - program not provided");
+    }
 
     // Cập nhật BattleState
     if team == constants::team::TEAM_A {
@@ -89,11 +175,22 @@ pub fn deposit(ctx: Context<Deposit>, amount: u64, team: u8) -> Result<()> {
     }
 
     // Mint ticket token cho người dùng
-    let bump = ctx.bumps.get("ticket_mint_authority").copied().ok_or(MemeWarsError::InvalidVault)?;
+    // Derive ticket_mint_authority bump
+    let battle_id_bytes = battle.battle_id.to_le_bytes();
+    let team_bytes = team.to_le_bytes();
+    let (_, ticket_mint_authority_bump) = Pubkey::find_program_address(
+        &[
+            b"ticket_mint_authority",
+            battle_id_bytes.as_ref(),
+            team_bytes.as_ref(),
+        ],
+        ctx.program_id,
+    );
+    let bump = ticket_mint_authority_bump;
     let seeds = &[
         b"ticket_mint_authority",
-        battle.battle_id.to_le_bytes().as_ref(),
-        team.to_le_bytes().as_ref(),
+        battle_id_bytes.as_ref(),
+        team_bytes.as_ref(),
         &[bump],
     ];
     let signer = &[&seeds[..]];
@@ -178,6 +275,57 @@ pub struct Deposit<'info> {
         token::authority = user
     )]
     pub user_ticket_account: Account<'info, TokenAccount>,
+
+    /// Lending program (Marinade, Marginfi, hoặc Kamino)
+    /// CHECK: Optional program cho lending integration
+    pub lending_program: Option<UncheckedAccount<'info>>,
+
+    // Marinade accounts
+    /// Marinade state account
+    /// CHECK: Required for Marinade integration
+    pub marinade_state: Option<UncheckedAccount<'info>>,
+
+    /// mSOL mint address
+    /// CHECK: Required for Marinade integration
+    pub lending_mint_account: Option<UncheckedAccount<'info>>,
+
+    /// mSOL token account (owned by vault PDA)
+    /// CHECK: Required for Marinade integration - must be owned by vault
+    pub lending_token_account: Option<UncheckedAccount<'info>>,
+
+    /// Marinade liquidity pool SOL leg PDA
+    /// CHECK: Required for Marinade integration
+    pub marinade_liq_pool_sol: Option<UncheckedAccount<'info>>,
+
+    /// Marinade liquidity pool mSOL leg
+    /// CHECK: Required for Marinade integration
+    pub marinade_liq_pool_msol: Option<UncheckedAccount<'info>>,
+
+    /// Marinade liquidity pool mSOL authority
+    /// CHECK: Required for Marinade integration
+    pub marinade_liq_pool_authority: Option<UncheckedAccount<'info>>,
+
+    /// Marinade reserve PDA
+    /// CHECK: Required for Marinade integration
+    pub marinade_reserve: Option<UncheckedAccount<'info>>,
+
+    /// mSOL mint authority
+    /// CHECK: Required for Marinade integration
+    pub marinade_msol_mint_authority: Option<UncheckedAccount<'info>>,
+
+    // Marginfi accounts
+    /// Lending group account (cho Marginfi: marginfi_group)
+    /// CHECK: Optional - chỉ cần cho Marginfi
+    pub lending_group_account: Option<UncheckedAccount<'info>>,
+
+    /// Lending user account (cho Marginfi/Kamino: user's lending account)
+    /// CHECK: Optional - chỉ cần cho Marginfi/Kamino
+    pub lending_user_account: Option<UncheckedAccount<'info>>,
+
+    // Kamino accounts
+    /// Lending pool account (cho Kamino: lending_pool)
+    /// CHECK: Optional - chỉ cần cho Kamino
+    pub lending_pool_account: Option<UncheckedAccount<'info>>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,

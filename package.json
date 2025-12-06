@@ -1,0 +1,41 @@
+{
+  "name": "memewars",
+  "version": "0.1.0",
+  "description": "MemeWars - Thị Trường Dự Đoán Không Mất Vốn",
+  "scripts": {
+    "test": "anchor test",
+    "test:devnet": "anchor test --skip-local-validator --provider.cluster devnet",
+    "test:marinade": "npm run build:direct && ts-mocha -p ./tsconfig.json -t 1000000 tests/memewars-marinade.ts",
+    "build": "bash scripts/build.sh",
+    "build:direct": "anchor build",
+    "build:windows": "powershell -ExecutionPolicy Bypass -File scripts/build.ps1",
+    "deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "get-marinade": "ts-node scripts/get-marinade-accounts.ts",
+    "get-marinade:mainnet": "NETWORK=mainnet-beta ts-node scripts/get-marinade-accounts.ts",
+    "get-marinade:mainnet:windows": "powershell -ExecutionPolicy Bypass -File scripts/get-marinade-mainnet.ps1",
+    "get-marinade:devnet": "NETWORK=devnet ts-node scripts/get-marinade-accounts.ts",
+    "get-marinade:devnet:windows": "powershell -ExecutionPolicy Bypass -File scripts/get-marinade-devnet.ps1",
+    "test:marinade:mainnet": "ts-node scripts/test-marinade-mainnet.ts",
+    "setup:env": "bash -c 'if [ ! -f .env.example ]; then bash scripts/create-env-example.sh; fi' && bash scripts/setup-env.sh",
+    "setup:env:windows": "powershell -ExecutionPolicy Bypass -File scripts/setup-env.ps1",
+    "install:solana": "bash -c \"$(curl -sSfL https://release.solana.com/stable/install)\"",
+    "install:solana:windows": "powershell -ExecutionPolicy Bypass -File scripts/install-solana.ps1",
+    "fix:solana-rust": "powershell -ExecutionPolicy Bypass -File scripts/fix-solana-rust.ps1"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@marinade.finance/marinade-ts-sdk": "^5.0.18",
+    "@solana/spl-token": "^0.3.9",
+    "@solana/web3.js": "^1.87.6"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.0",
+    "chai": "^4.3.11",
+    "mocha": "^10.2.0",
+    "ts-mocha": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

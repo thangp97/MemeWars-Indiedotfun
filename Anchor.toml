@@ -2,6 +2,9 @@
 resolution = true
 skip-lint = false
 
+[toolchain]
+anchor_version = "0.32.1"
+
 [programs.localnet]
 memewars = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 
@@ -26,4 +29,8 @@ address = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 
 [[test.validator.clone]]
 address = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+
+# Marinade Finance (for testing - uncomment if needed)
+# [[test.validator.clone]]
+# address = "MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD"
 

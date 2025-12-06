@@ -2,10 +2,10 @@ use anchor_lang::prelude::*;
 
 pub mod constants;
 pub mod instructions;
+pub mod lending;
 pub mod state;
 
 use instructions::*;
-use state::*;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -13,7 +13,7 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 pub mod memewars {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+    pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
         msg!("MemeWars program initialized");
         Ok(())
     }

@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0F;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #FF00FF 0%, #00FFFF 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #FF33FF 0%, #33FFFF 100%);
+}
+
+/* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-dark text-white;
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(255, 0, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(0, 255, 255, 0.08) 0%, transparent 50%),
+    linear-gradient(to right, rgba(255, 0, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 0, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 50px 50px, 50px 50px;
+}
+
+/* Solana Wallet Adapter overrides */
+.wallet-adapter-button {
+  @apply !bg-gradient-to-r !from-primary !to-secondary !text-white !font-bold !rounded-xl !px-6 !py-3 !transition-all !duration-300 hover:!shadow-neon-primary hover:!scale-105;
+}
+
+.wallet-adapter-modal-wrapper {
+  @apply !bg-dark-50/95 !backdrop-blur-xl !rounded-2xl !border !border-primary/30;
+}
+
+.wallet-adapter-modal-title {
+  @apply !text-white !font-display !text-2xl;
+}
+
+.wallet-adapter-modal-list {
+  @apply !gap-2;
+}
+
+.wallet-adapter-modal-list-more {
+  @apply !text-secondary hover:!text-primary;
+}
+
+.wallet-adapter-modal-list li {
+  @apply !rounded-xl !transition-all !duration-200 hover:!bg-primary/10;
+}
+
+.wallet-adapter-modal-list li button {
+  @apply !text-white !font-medium;
+}
+
+/* Custom utilities */
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-secondary;
+  }
+  
+  .text-gradient-bonk {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-bonk to-bonk-light;
+  }
+  
+  .text-gradient-wif {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-wif to-wif-light;
+  }
+  
+  .border-gradient {
+    @apply border-transparent bg-clip-padding;
+    background: linear-gradient(#0A0A0F, #0A0A0F), linear-gradient(135deg, #FF00FF, #00FFFF);
+    background-origin: padding-box, border-box;
+  }
+  
+  .glow-text {
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 40px currentColor;
+  }
+  
+  .glass {
+    @apply bg-dark-50/50 backdrop-blur-xl border border-white/10;
+  }
+  
+  .glass-primary {
+    @apply bg-primary/10 backdrop-blur-xl border border-primary/30;
+  }
+  
+  .glass-secondary {
+    @apply bg-secondary/10 backdrop-blur-xl border border-secondary/30;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-lg;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-primary-400 text-white font-bold py-3 px-6 rounded-xl 
+           transition-all duration-300 hover:shadow-neon-primary hover:scale-105 
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none;
+  }
+  
+  .btn-secondary {
+    @apply bg-gradient-to-r from-secondary to-secondary-400 text-dark font-bold py-3 px-6 rounded-xl 
+           transition-all duration-300 hover:shadow-neon-secondary hover:scale-105
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none;
+  }
+  
+  .btn-accent {
+    @apply bg-gradient-to-r from-accent to-accent-400 text-dark font-bold py-3 px-6 rounded-xl 
+           transition-all duration-300 hover:shadow-neon-accent hover:scale-105
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-primary text-primary font-bold py-3 px-6 rounded-xl 
+           transition-all duration-300 hover:bg-primary hover:text-white hover:shadow-neon-primary
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .input-field {
+    @apply w-full bg-dark-100 border border-white/10 rounded-xl px-4 py-3 text-white 
+           placeholder:text-gray-500 focus:outline-none focus:border-primary focus:ring-2 
+           focus:ring-primary/30 transition-all duration-300;
+  }
+}
+
+/* Animations */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Battle VS animation */
+@keyframes vs-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5));
+  }
+  50% { 
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 40px rgba(255, 215, 0, 0.8));
+  }
+}
+
+.animate-vs {
+  animation: vs-pulse 2s ease-in-out infinite;
+}
+
+/* Loading dots */
+@keyframes loading-dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+.loading-dots::after {
+  content: '.';
+  animation: loading-dots 1.5s infinite;
+}
+
+/* Number counter animation */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count {
+  animation: count-up 0.5s ease-out forwards;
+}
