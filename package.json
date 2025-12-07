@@ -5,6 +5,9 @@
   "scripts": {
     "test": "anchor test",
     "test:devnet": "anchor test --skip-local-validator --provider.cluster devnet",
+    "test:file": "ts-mocha -p ./tsconfig.json -t 1000000",
+    "test:full": "npm run build:direct && ts-mocha -p ./tsconfig.json -t 1000000 tests/memewars-full.ts",
+    "test:full:devnet": "bash scripts/test-devnet.sh tests/memewars-full.ts",
     "test:marinade": "npm run build:direct && ts-mocha -p ./tsconfig.json -t 1000000 tests/memewars-marinade.ts",
     "build": "bash scripts/build.sh",
     "build:direct": "anchor build",
