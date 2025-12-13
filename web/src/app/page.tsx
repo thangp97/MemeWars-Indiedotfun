@@ -157,8 +157,8 @@ export default function Home() {
             <a href="#how-it-works" className="btn-outline flex items-center gap-2">
               <span>How it Works</span>
               <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
+          </a>
+        </div>
         </motion.div>
 
         {/* Stats */}

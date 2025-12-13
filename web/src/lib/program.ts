@@ -1,9 +1,17 @@
 import { PublicKey } from "@solana/web3.js";
 
 // Program ID - Update this with your deployed program ID
+// export const PROGRAM_ID = new PublicKey(
+//   process.env.NEXT_PUBLIC_PROGRAM_ID || "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+// );
+
+// Update Program ID
 export const PROGRAM_ID = new PublicKey(
-  process.env.NEXT_PUBLIC_PROGRAM_ID || "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+  "71r5LdZhJUpLaNJvCeSxmRqzNmcJuiM8XQ7U8AQdKHGB"
 );
+
+// Update network
+export const NETWORK = "devnet";
 
 // Marinade Finance addresses (mainnet)
 export const MARINADE_ADDRESSES = {
